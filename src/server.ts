@@ -103,7 +103,7 @@ export class ApplicationServer {
     }));
 
     this.app.get('/', (c) => c.json({
-      message: 'VoidAI API Server',
+      message: 'VOIAI Backend (Not affilated with VoidAI)',
       status: 'operational',
       timestamp: new Date().toISOString()
     }));

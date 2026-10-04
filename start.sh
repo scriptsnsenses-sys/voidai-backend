@@ -6,7 +6,7 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${GREEN}Starting VoidAI Environment...${NC}"
+echo -e "${GREEN}Starting VOIAI Backend (Not affilated with VoidAI)...${NC}"
 
 if [ ! -f .env ]; then
     echo -e "${RED}Error: .env file not found!${NC}"
