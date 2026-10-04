@@ -114,14 +114,12 @@ export class ApplicationServer {
 
   private async setupGlobalMiddleware(): Promise<void> {
     const kernel = this.bootstrap.getKernel();
-    const [auth, snakeCase, rateLimit] = await Promise.all([
+    const [auth, snakeCase] = await Promise.all([
       kernel.getAsync<any>('AuthMiddleware'),
-      kernel.getAsync<any>('SnakeCaseMiddleware'),
-      kernel.getAsync<any>('RateLimitMiddleware')
+      kernel.getAsync<any>('SnakeCaseMiddleware')
     ]);
 
     this.app.use('*', snakeCase.handle);
-    this.app.use('/v1/*', rateLimit.handle);
     this.app.use('/v1/*', auth.handle);
     this.app.use('/admin/*', auth.handle);
   }
