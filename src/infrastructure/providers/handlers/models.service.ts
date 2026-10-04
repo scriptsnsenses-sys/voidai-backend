@@ -60,7 +60,7 @@ export class ModelsService {
         }
       });
 
-      return model;
+      return this.transformModelToResponse(model);
 
     } catch (error) {
       this.logger.error('Failed to get model info', error as Error, {
@@ -105,7 +105,6 @@ export class ModelsService {
       object: 'model',
       owned_by: model.ownedBy,
       endpoints: model.endpoints,
-      plan_requirements: model.planRequirements,
       cost_type: model.costType,
       base_cost: model.baseCost,
       multiplier: model.multiplier,

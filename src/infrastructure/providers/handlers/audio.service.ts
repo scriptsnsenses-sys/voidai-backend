@@ -340,7 +340,7 @@ export class AudioService {
     request: SpeechRequest,
     execution: AudioExecution
   ): Promise<void> {
-    if (execution.user.isMasterAdmin) return;
+    if (execution.user.isMasterAdmin || execution.user.isAnonymous) return;
 
     const credits = this.modelRegistry.getBaseCost(request.model);
     const estimatedCredits = Math.max(
@@ -357,7 +357,7 @@ export class AudioService {
     request: AudioTranscriptionRequest,
     execution: AudioExecution
   ): Promise<void> {
-    if (execution.user.isMasterAdmin) return;
+    if (execution.user.isMasterAdmin || execution.user.isAnonymous) return;
 
     const credits = this.modelRegistry.getBaseCost(request.model);
     const fileSizeCredits = Math.ceil(request.file.size / AudioService.MB_IN_BYTES);
@@ -378,7 +378,7 @@ export class AudioService {
     const tokens = this.calculateSpeechTokens(request);
     const duration = Date.now() - execution.startTime;
 
-    if (!execution.user.isMasterAdmin) {
+    if (!execution.user.isMasterAdmin && !execution.user.isAnonymous) {
       await this.billing.deductCredits(
         execution.user.id,
         credits,
@@ -410,7 +410,7 @@ export class AudioService {
     const tokens = this.calculateTranscriptionTokens(result);
     const duration = Date.now() - execution.startTime;
 
-    if (!execution.user.isMasterAdmin) {
+    if (!execution.user.isMasterAdmin && !execution.user.isAnonymous) {
       await this.billing.deductCredits(
         execution.user.id,
         credits,
@@ -534,7 +534,7 @@ export class AudioService {
     clientInfo: ClientInfo
   ) {
     return this.requestTracker.createRequest({
-      userId: user.isMasterAdmin ? undefined : user.id,
+      userId: user.isMasterAdmin || user.isAnonymous ? undefined : user.id,
       endpoint: '/v1/audio/speech',
       method: 'POST',
       model: request.model,
@@ -550,7 +550,7 @@ export class AudioService {
     clientInfo: ClientInfo
   ) {
     return this.requestTracker.createRequest({
-      userId: user.isMasterAdmin ? undefined : user.id,
+      userId: user.isMasterAdmin || user.isAnonymous ? undefined : user.id,
       endpoint: '/v1/audio/transcriptions',
       method: 'POST',
       model: request.model,

@@ -76,7 +76,7 @@ export class ModelRegistryService {
   }
 
   public getModelsByPlan(userPlan: string): ReadonlyArray<ModelInfo> {
-    return this.getAllModels().filter(model => model.planRequirements.includes(userPlan));
+    return this.getAllModels();
   }
 
   public supportsEndpoint(modelId: string, endpoint: string): boolean {
@@ -85,8 +85,7 @@ export class ModelRegistryService {
   }
 
   public hasAccess(modelId: string, userPlan: string): boolean {
-    const model = this.getById(modelId);
-    return model?.planRequirements.includes(userPlan) ?? false;
+    return this.exists(modelId);
   }
 
   public supportsStreaming(modelId: string): boolean {
@@ -897,10 +896,10 @@ class ModelConfigLoader {
       object: 'model',
       ownedBy: config.ownedBy,
       endpoints: config.endpoints ?? ModelConfigLoader.DEFAULT_CHAT_ENDPOINTS,
-      planRequirements: config.planRequirements,
+      planRequirements: [],
       costType: config.costType ?? 'per_token',
-      baseCost: config.baseCost ?? 0,
-      multiplier: config.multiplier,
+      baseCost: 0,
+      multiplier: 0,
       supportsStreaming: config.supportsStreaming ?? true,
       supportsToolCalling: config.supportsToolCalling ?? true
     };

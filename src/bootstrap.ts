@@ -623,17 +623,13 @@ export class ApplicationBootstrap {
   }
 
   private async initializeProviders(): Promise<void> {
-    const [providerInitService, healthMonitorService, creditService, discountService] = await Promise.all([
+    const [providerInitService, healthMonitorService] = await Promise.all([
       this.kernel.getAsync<any>('ProviderInitializationService'),
-      this.kernel.getAsync<any>('HealthMonitorService'),
-      this.kernel.getAsync<any>('CreditService'),
-      this.kernel.getAsync<any>('DiscountService')
+      this.kernel.getAsync<any>('HealthMonitorService')
     ]);
 
     await providerInitService.initializeProviders();
     healthMonitorService.startMonitoring();
-    creditService.startCronJobs();
-    discountService.startCronJobs();
 
     this.logger?.info('All services initialized successfully');
   }

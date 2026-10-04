@@ -18,6 +18,7 @@ interface UserContext {
   credits: number;
   enabled: boolean;
   isMasterAdmin: boolean;
+  isAnonymous?: boolean;
   isOAuthToken?: boolean;
   isRPVerified?: boolean;
   rpBonusTokensExpires?: number;
@@ -77,11 +78,43 @@ export class AuthMiddleware {
     private readonly logger: ILogger
   ) {}
 
-  public readonly handle = async (c: Context, next: Next): Promise<void> => {
+  public readonly handle = async (c: Context, next: Next): Promise<Response | void> => {
     const startTime = Date.now();
     const requestId = c.get('requestId') || this.generateRequestId();
 
     try {
+      if (c.req.path.startsWith('/admin/')) {
+        const authorization = c.req.header('authorization');
+        const token = authorization?.startsWith(AuthMiddleware.BEARER_PREFIX)
+          ? authorization.slice(AuthMiddleware.BEARER_PREFIX.length).trim()
+          : '';
+        if (!this.isMasterAdmin(token)) {
+          return c.json({
+            error: {
+              message: 'A valid admin key is required.',
+              type: 'authentication_error',
+              code: 'invalid_admin_key'
+            }
+          }, 401);
+        }
+
+        this.setMasterAdminContext(c);
+        await next();
+        return;
+      }
+
+      c.set('user', {
+        id: 'anonymous',
+        name: 'Anonymous',
+        plan: 'free',
+        credits: Number.MAX_SAFE_INTEGER,
+        enabled: true,
+        isMasterAdmin: false,
+        isAnonymous: true
+      });
+      await next();
+      return;
+
       await this.ensureDatabaseConnection(requestId);
 
       const token = this.extractApiKey(c);
@@ -218,9 +251,11 @@ export class AuthMiddleware {
   }
 
   private extractIpAddress(c: Context): string {
+    const forwardedFor = c.req.header('x-forwarded-for');
     return (
       c.req.header('cf-connecting-ip') ||
-      c.req.header('x-forwarded-for') ||
+      c.req.header('x-real-ip') ||
+      forwardedFor?.split(',')[0].trim() ||
       'unknown'
     );
   }

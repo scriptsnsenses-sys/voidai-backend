@@ -122,14 +122,8 @@ export class ApplicationServer {
 
     this.app.use('*', snakeCase.handle);
     this.app.use('/v1/*', rateLimit.handle);
-    
-    const protectedRoutes = [
-      '/v1/chat/*', '/v1/images/*', '/v1/videos/*', '/v1/audio/*', '/v1/embeddings',
-      '/v1/moderations', '/v1/responses', '/v1/discounts/my-discounts',
-      '/v1/discounts/eligible-models', '/admin/*'
-    ];
-    
-    protectedRoutes.forEach(route => this.app.use(route, auth.handle));
+    this.app.use('/v1/*', auth.handle);
+    this.app.use('/admin/*', auth.handle);
   }
 
   private async setupApiRoutes(): Promise<void> {
@@ -138,7 +132,7 @@ export class ApplicationServer {
     const controllers = await Promise.all([
       'ChatController', 'AudioController', 'EmbeddingsController', 'ImagesController',
       'VideosController', 'ModelsController', 'ModerationsController', 'ResponsesController',
-      'UsersController', 'SubProvidersController', 'ApiLogsController', 'DiscountsController'
+      'SubProvidersController', 'ApiLogsController'
     ].map(name => kernel.getAsync<any>(name)));
 
     controllers.forEach(controller => this.app.route('/', controller.registerRoutes()));

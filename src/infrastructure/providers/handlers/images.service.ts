@@ -340,7 +340,10 @@ export class ImagesService {
     execution: ImageExecution,
     clientInfo: ClientInfo
   ): Promise<void> {
-    const analysis = await this.security.analyzeImageContent(prompt, execution.user.id);
+    const analysis = await this.security.analyzeImageContent(
+      prompt,
+      execution.user.isAnonymous ? undefined : execution.user.id
+    );
 
     if (analysis.isBlocked) {
       this.logger.warn('Image prompt blocked by security', {
@@ -359,7 +362,7 @@ export class ImagesService {
   }
 
   private async authorizeImageRequest(request: any, execution: ImageExecution): Promise<void> {
-    if (execution.user.isMasterAdmin) return;
+    if (execution.user.isMasterAdmin || execution.user.isAnonymous) return;
 
     const credits = this.modelRegistry.getBaseCost(request.model);
     const totalCredits = credits * execution.imageCount;
@@ -379,7 +382,7 @@ export class ImagesService {
     const totalCredits = credits * result.data.length;
     const duration = Date.now() - execution.startTime;
 
-    if (!execution.user.isMasterAdmin) {
+    if (!execution.user.isMasterAdmin && !execution.user.isAnonymous) {
       await this.billing.deductCredits(
         execution.user.id,
         totalCredits,
@@ -478,7 +481,7 @@ export class ImagesService {
     clientInfo: ClientInfo
   ) {
     return this.requestTracker.createRequest({
-      userId: user.isMasterAdmin ? undefined : user.id,
+      userId: user.isMasterAdmin || user.isAnonymous ? undefined : user.id,
       endpoint: '/v1/images/generations',
       method: 'POST',
       model: request.model,
@@ -494,7 +497,7 @@ export class ImagesService {
     clientInfo: ClientInfo
   ) {
     return this.requestTracker.createRequest({
-      userId: user.isMasterAdmin ? undefined : user.id,
+      userId: user.isMasterAdmin || user.isAnonymous ? undefined : user.id,
       endpoint: '/v1/images/edits',
       method: 'POST',
       model: request.model,

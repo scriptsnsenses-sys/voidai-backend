@@ -227,7 +227,7 @@ export class EmbeddingsService {
     request: EmbeddingRequest,
     execution: EmbeddingExecution
   ): Promise<void> {
-    if (execution.user.isMasterAdmin) return;
+    if (execution.user.isMasterAdmin || execution.user.isAnonymous) return;
 
     const credits = this.modelRegistry.getBaseCost(request.model);
     const estimatedCredits = credits * execution.inputCount;
@@ -247,7 +247,7 @@ export class EmbeddingsService {
     const actualCredits = credits * execution.inputCount;
     const duration = Date.now() - execution.startTime;
 
-    if (!execution.user.isMasterAdmin) {
+    if (!execution.user.isMasterAdmin && !execution.user.isAnonymous) {
       await this.billing.deductCredits(
         execution.user.id,
         actualCredits,
@@ -323,7 +323,7 @@ export class EmbeddingsService {
     clientInfo: ClientInfo
   ) {
     return this.requestTracker.createRequest({
-      userId: user.isMasterAdmin ? undefined : user.id,
+      userId: user.isMasterAdmin || user.isAnonymous ? undefined : user.id,
       endpoint: '/v1/embeddings',
       method: 'POST',
       model: request.model,

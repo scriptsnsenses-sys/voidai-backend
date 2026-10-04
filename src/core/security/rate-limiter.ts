@@ -1,11 +1,6 @@
 import type { IRateLimiter } from './types';
 import type { ICacheService } from '../cache';
 
-interface RateLimitData {
-  count: number;
-  timestamp: number;
-}
-
 export class RateLimiter implements IRateLimiter {
   private static readonly CACHE_KEY_PREFIX = 'rate_limit:';
   private cacheService: ICacheService;
@@ -15,12 +10,12 @@ export class RateLimiter implements IRateLimiter {
   }
 
   async isAllowed(key: string, limit: number, windowMs: number): Promise<boolean> {
-    const currentCount = await this.getCurrentCount(key, windowMs);
-    return currentCount < limit;
+    const currentCount = await this.incrementWindowCount(key, windowMs);
+    return currentCount <= limit;
   }
 
   async getRemainingRequests(key: string, limit: number, windowMs: number): Promise<number> {
-    const currentCount = await this.getCurrentCount(key, windowMs);
+    const currentCount = await this.incrementWindowCount(key, windowMs);
     return Math.max(0, limit - currentCount);
   }
 
@@ -29,31 +24,13 @@ export class RateLimiter implements IRateLimiter {
     await this.cacheService.delete(cacheKey);
   }
 
-  private async getCurrentCount(key: string, windowMs: number): Promise<number> {
+  private async incrementWindowCount(key: string, windowMs: number): Promise<number> {
     const cacheKey = this.buildCacheKey(key);
-    const data = await this.cacheService.get<RateLimitData>(cacheKey);
-    const now = Date.now();
-    
-    if (!data || this.isWindowExpired(data.timestamp, now, windowMs)) {
-      await this.setRateLimitData(cacheKey, 1, now, windowMs);
-      return 1;
-    }
-
-    const newCount = data.count + 1;
-    await this.setRateLimitData(cacheKey, newCount, data.timestamp, windowMs);
-    return newCount;
+    return this.cacheService.increment(cacheKey, Math.ceil(windowMs / 1000));
   }
 
   private buildCacheKey(key: string): string {
     return `${RateLimiter.CACHE_KEY_PREFIX}${key}`;
   }
 
-  private isWindowExpired(timestamp: number, now: number, windowMs: number): boolean {
-    return now - timestamp > windowMs;
-  }
-
-  private async setRateLimitData(cacheKey: string, count: number, timestamp: number, ttl: number): Promise<void> {
-    const data: RateLimitData = { count, timestamp };
-    await this.cacheService.set(cacheKey, data, ttl);
-  }
 }

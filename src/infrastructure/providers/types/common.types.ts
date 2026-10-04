@@ -7,6 +7,7 @@ export const AuthenticatedUserSchema = z.object({
   credits: z.number(),
   enabled: z.boolean(),
   isMasterAdmin: z.boolean().optional(),
+  isAnonymous: z.boolean().optional(),
   isRPVerified: z.boolean().optional(),
   rpBonusTokensExpires: z.number().optional()
 });

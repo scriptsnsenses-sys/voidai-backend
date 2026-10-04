@@ -15,7 +15,7 @@ interface RateLimitError {
 
 export class RateLimitMiddleware {
   private readonly config: RateLimitConfig = {
-    requestsPerMinute: 100,
+    requestsPerMinute: 8,
     windowMs: 60 * 1000
   };
 
@@ -33,47 +33,42 @@ export class RateLimitMiddleware {
     const key = this.generateRateLimitKey(c);
     const rateLimitKey = `${key}:minute`;
 
+    let isAllowed: boolean;
     try {
-      const isAllowed = await this.rateLimiter.isAllowed(
+      isAllowed = await this.rateLimiter.isAllowed(
         rateLimitKey,
         this.config.requestsPerMinute,
         this.config.windowMs
       );
-
-      if (!isAllowed) {
-        this.logRateLimitExceeded(key);
-        return this.createRateLimitResponse(c);
-      }
-
-      await next();
     } catch (error) {
       this.logRateLimitError(error as Error, key);
-      await next();
+      return c.json({
+        error: {
+          message: 'Rate limiting is temporarily unavailable.',
+          type: 'service_unavailable',
+          code: 'rate_limit_unavailable'
+        }
+      }, 503);
     }
+
+    if (!isAllowed) {
+      this.logRateLimitExceeded(key);
+      return this.createRateLimitResponse(c);
+    }
+
+    await next();
   };
 
   private generateRateLimitKey(c: Context): string {
-    const apiKey = this.extractApiKey(c);
-    if (apiKey) {
-      return `api_key:${apiKey.substring(0, 16)}`;
-    }
-
     const clientIp = this.extractClientIp(c);
     return `ip:${clientIp}`;
   }
 
-  private extractApiKey(c: Context): string | null {
-    const authHeader = c.req.header('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return null;
-    }
-    return authHeader.replace('Bearer ', '');
-  }
-
   private extractClientIp(c: Context): string {
     return (
-      c.req.header('x-forwarded-for') ||
+      c.req.header('cf-connecting-ip') ||
       c.req.header('x-real-ip') ||
+      c.req.header('x-forwarded-for')?.split(',')[0].trim() ||
       c.env?.ip ||
       'unknown'
     );

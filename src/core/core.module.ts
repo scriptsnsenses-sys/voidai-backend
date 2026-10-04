@@ -54,6 +54,7 @@ export class CoreModule extends BaseModule {
       const logger = this.kernel.get<ILogger>('Logger');
       const redisCache = new RedisCacheService(logger, {
         defaultTtl: 3600,
+        url: process.env.REDIS_URL,
         host: process.env.REDIS_HOST || 'redis',
         port: parseInt(process.env.REDIS_PORT || '6379'),
         db: parseInt(process.env.REDIS_DB || '0')

@@ -5,7 +5,6 @@ export const ModelInfoSchema = z.object({
   object: z.literal('model'),
   owned_by: z.string(),
   endpoints: z.array(z.string()),
-  plan_requirements: z.array(z.string()),
   cost_type: z.enum(['per_token', 'fixed']),
   base_cost: z.number(),
   multiplier: z.number(),

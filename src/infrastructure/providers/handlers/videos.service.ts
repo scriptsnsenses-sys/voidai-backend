@@ -472,7 +472,7 @@ export class VideosService {
           id: result.id,
           created_at: Date.now(),
           updated_at: Date.now(),
-          user_id: execution.user.isMasterAdmin ? undefined : execution.user.id,
+          user_id: execution.user.isMasterAdmin || execution.user.isAnonymous ? undefined : execution.user.id,
           model: request.model,
           provider_name: selection.provider.name,
           sub_provider_id: selection.subProvider?.id,
@@ -542,7 +542,10 @@ export class VideosService {
     execution: VideoExecution,
     clientInfo: ClientInfo
   ): Promise<void> {
-    const analysis = await this.security.analyzeImageContent(prompt, execution.user.id);
+    const analysis = await this.security.analyzeImageContent(
+      prompt,
+      execution.user.isAnonymous ? undefined : execution.user.id
+    );
 
     if (analysis.isBlocked) {
       this.logger.warn('Video prompt blocked by security', {
@@ -561,7 +564,7 @@ export class VideosService {
   }
 
   private async authorizeVideoRequest(request: VideoCreateRequest, execution: VideoExecution): Promise<void> {
-    if (execution.user.isMasterAdmin) return;
+    if (execution.user.isMasterAdmin || execution.user.isAnonymous) return;
 
     const credits = this.modelRegistry.getBaseCost(request.model);
 
@@ -579,7 +582,7 @@ export class VideosService {
     const credits = this.modelRegistry.getBaseCost(request.model);
     const duration = Date.now() - execution.startTime;
 
-    if (!execution.user.isMasterAdmin) {
+    if (!execution.user.isMasterAdmin && !execution.user.isAnonymous) {
       await this.billing.deductCredits(
         execution.user.id,
         credits,
@@ -644,7 +647,7 @@ export class VideosService {
     clientInfo: ClientInfo
   ) {
     return this.requestTracker.createRequest({
-      userId: user.isMasterAdmin ? undefined : user.id,
+      userId: user.isMasterAdmin || user.isAnonymous ? undefined : user.id,
       endpoint: '/v1/videos',
       method: 'POST',
       model: request.model,

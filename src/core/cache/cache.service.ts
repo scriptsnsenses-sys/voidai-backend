@@ -2,6 +2,7 @@ import type { ICacheService, CacheOptions } from './types';
 import type { ILogger } from '../logging';
 
 interface RedisOptions extends CacheOptions {
+  url?: string;
   host?: string;
   port?: number;
   db?: number;
@@ -94,6 +95,16 @@ export class RedisCacheService implements ICacheService {
     }
   }
 
+  async increment(key: string, ttlSeconds: number): Promise<number> {
+    await this.ensureConnected();
+
+    const count = await this.redis.incr(key);
+    if (count === 1 && ttlSeconds > 0) {
+      await this.redis.expire(key, ttlSeconds);
+    }
+    return count;
+  }
+
   async mget<T>(keys: string[]): Promise<(T | null)[]> {
     await this.ensureConnected();
     
@@ -138,6 +149,10 @@ export class RedisCacheService implements ICacheService {
   }
 
   private buildRedisUrl(): string {
+    if (this.options.url) {
+      return this.options.url;
+    }
+
     const host = this.options.host || RedisCacheService.DEFAULT_HOST;
     const port = this.options.port || RedisCacheService.DEFAULT_PORT;
     const db = this.options.db || RedisCacheService.DEFAULT_DB;

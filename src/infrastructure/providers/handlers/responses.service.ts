@@ -105,7 +105,7 @@ export class ResponsesService {
 
     await this.performSecurityAnalysis(request, execution, clientInfo);
     
-    if (!execution.user.isMasterAdmin) {
+    if (!execution.user.isMasterAdmin && !execution.user.isAnonymous) {
       await this.authorizeRequest(execution, clientInfo);
     }
   }
@@ -118,7 +118,7 @@ export class ResponsesService {
     const content = this.extractContentText(request);
     const analysis = await this.security.analyzeContent(
       content,
-      execution.user.id,
+      execution.user.isAnonymous ? '' : execution.user.id,
       execution.user.plan,
       clientInfo.origin,
       execution.model
@@ -369,7 +369,7 @@ export class ResponsesService {
     const credits = this.modelRegistry.calculateCredits(execution.model, totalTokens);
     const duration = Date.now() - execution.startTime;
 
-    if (!execution.user.isMasterAdmin) {
+    if (!execution.user.isMasterAdmin && !execution.user.isAnonymous) {
       await this.billing.deductCredits(
         execution.user.id,
         credits,
@@ -487,7 +487,7 @@ export class ResponsesService {
     clientInfo: ClientInfo
   ) {
     return this.requestTracker.createRequest({
-      userId: user.isMasterAdmin ? undefined : user.id,
+      userId: user.isMasterAdmin || user.isAnonymous ? undefined : user.id,
       endpoint: '/v1/responses',
       method: 'POST',
       model: request.model,
@@ -817,7 +817,7 @@ class ResponsesStreamProcessor implements AsyncIterable<ResponseStreamEvent> {
     const totalTokens = this.execution.estimatedTokens + outputTokens + reasoningTokens;
     const credits = this.models.calculateCredits(this.execution.model, totalTokens);
 
-    if (!this.execution.user.isMasterAdmin) {
+    if (!this.execution.user.isMasterAdmin && !this.execution.user.isAnonymous) {
       await this.billing.deductCredits(
         this.execution.user.id,
         credits,
